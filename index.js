@@ -20,7 +20,8 @@ dbConnect();
 // Enable CORS for all routes (recommended)
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    // origin: "http://localhost:5173",
+    origin: "https://test.bouncyboxstudio.in",
     credentials: true,
   })
 );
