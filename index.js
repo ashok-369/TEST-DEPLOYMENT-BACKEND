@@ -1,4 +1,3 @@
-// index.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -18,10 +17,25 @@ app.use(express.static(path.join(__dirname, "public")));
 
 dbConnect();
 
+// Allowed origins
+const allowedOrigins = [
+  "https://test.bouncyboxstudio.in",
+  "http://localhost:5173",
+  "https://plumeriaresort.in",
+];
+
 // CORS Setup
 app.use(
   cors({
-    origin: "https://test.bouncyboxstudio.in",
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
