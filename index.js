@@ -1,4 +1,4 @@
-require("dotenv").config();
+// require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -6,7 +6,7 @@ const { dbConnect } = require("./config/config");
 const userRoute = require("./routes/routes.js");
 
 const app = express();
-const port = process.env.PORT;
+const port = 3500;
 
 // Middleware
 app.use(express.json());
