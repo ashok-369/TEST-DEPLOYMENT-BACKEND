@@ -13,7 +13,13 @@ const UserData = async (req, res) => {
         message: "All fields are required",
       });
     }
+    const ifExisting = await Contact.findOne({ $or: [{email},{phone}]})
 
+    if (ifExisting){
+      return res.status(400).json({
+        message :"Email or Phone Number already exists!"
+      })
+    }
     // Save to database
     const newContact = new Contact({
       name,
@@ -21,7 +27,7 @@ const UserData = async (req, res) => {
       email,
       message,
     });
-
+     
     await newContact.save();
 
     return res.status(201).json({
@@ -57,24 +63,7 @@ const fetchUsers = async (req, res) => {
   }
 };
 
-// const editUsers = async (req, res) => {
-//   try {
-//     const {id}=req.params;
-//     if(!id){
-//       return res.status(400).json({
-//         message:"wrong id"
-//       })
-//     }
 
-    
-    
-//   } catch (err) {
-//     res.status(500).json({
-//       success: false,
-//       message: "server failure",
-//     });
-//   }
-// };
 const editUsers = async (req, res) => {
   try {
     const { id } = req.params;
@@ -131,9 +120,36 @@ const editUsers = async (req, res) => {
   }
 };
 
-
+const deleteUsers = async (req, res) =>{
+  try{
+    const { id }= req.params
+    
+    if(!id){
+      return res.status(400).json({success:false,message:"Invalid user ID"})
+    }
+    const deletedUser=await Contact.findByIdAndDelete(id)
+    if(!deletedUser){
+      return res.status(400).json({
+        success:false,
+        message:"User Not Found",
+      })
+    }
+    return res.status(200).json({
+      success:true,
+      message:"User Deleted Successfully",
+    })
+  }catch(e){
+      console.error(`Delete User Error: ${e}`)
+      return res.status(500).json({
+        success:false,
+        message:"Server error while deleting user",
+        error: e.message,
+      })
+  }
+}
 module.exports = {
   UserData,
   fetchUsers,
-  editUsers
+  editUsers,
+  deleteUsers,
 };
