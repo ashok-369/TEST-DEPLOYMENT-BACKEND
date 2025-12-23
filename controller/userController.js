@@ -1,155 +1,120 @@
 const Contact = require("../Models/Contact");
 
-// Save contact form data
-const UserData = async (req, res) => {
-  try {
-    const { name, phone, email, message } = req.body;
-    console.log(req.body, "request object");
+/* ================= USER OPERATIONS ================= */
 
-    // Validate required fields
-    if (!name || !phone || !email || !message) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
-    }
-    const ifExisting = await Contact.findOne({ $or: [{email},{phone}]})
-
-    if (ifExisting){
-      return res.status(400).json({
-        message :"Email or Phone Number already exists!"
-      })
-    }
-    // Save to database
-    const newContact = new Contact({
-      name,
-      phone,
-      email,
-      message,
-    });
-     
-    await newContact.save();
-
-    return res.status(201).json({
-      success: true,
-      message: "Contact details saved successfully",
-      data: newContact,
-    });
-  } catch (error) {
-    console.error("Error saving contact:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Server error while saving contact details",
-      error: error.message,
-    });
-  }
-};
-
+// FETCH ALL USERS
 const fetchUsers = async (req, res) => {
   try {
-    const getUsers = await Contact.find();
-    console.log("getUsers", getUsers);
-    res.status(200).json({
-      success: true,
-      data: getUsers,
-    });
+    const users = await Contact.find();
+    res.json({ success: true, data: users });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching users",
-      error: err.message,
-    });
+    console.error("Fetch users error:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-
+// EDIT USER
 const editUsers = async (req, res) => {
   try {
+    const { name, email, phone } = req.body;
     const { id } = req.params;
 
-    if (!id) {
+    // Check duplicates in other users
+    const existing = await Contact.findOne({
+      _id: { $ne: id }, // exclude current user
+      $or: [{ email }, { phone }, { name }],
+    });
+
+    if (existing) {
       return res.status(400).json({
-        success: false,
-        message: "Invalid user id",
+        message:
+          existing.email === email
+            ? "Email already exists"
+            : existing.phone === phone
+            ? "Phone already exists"
+            : "Name already exists",
       });
     }
 
-    const { name, phone, email, message } = req.body;
-
-    if (!name && !phone && !email && !message) {
-      return res.status(400).json({
-        success: false,
-        message: "No data provided to update",
-      });
-    }
-
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (phone) updateData.phone = phone;
-    if (email) updateData.email = email;
-    if (message) updateData.message = message;
-
-    const updatedUser = await Contact.findByIdAndUpdate(
+    const updated = await Contact.findByIdAndUpdate(
       id,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
-      }
+      { name, email, phone },
+      { new: true }
     );
 
-    if (!updatedUser) {
-      return res.status(404).json({
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error("Edit user error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// DELETE USER
+const deleteUsers = async (req, res) => {
+  try {
+    await Contact.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "User deleted" });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// REGISTER USER
+const registerUser = async (req, res) => {
+  try {
+    const { name, email, phone } = req.body;
+    if (!name || !email || !phone) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+
+    const existing = await Contact.findOne({ $or: [{ email }, { phone }, { name }] });
+    if (existing) {
+      return res.status(400).json({
         success: false,
-        message: "User not found",
+        message:
+          existing.email === email
+            ? "Email already exists"
+            : existing.phone === phone
+            ? "Phone already exists"
+            : "Name already exists",
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "User updated successfully",
-      data: updatedUser,
-    });
+    const newContact = await Contact.create({ name, email, phone });
+    res.status(201).json({ success: true, message: "Registration successful!", data: newContact });
   } catch (err) {
-    console.error("Edit user error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server failure",
-    });
+    console.error("Register error:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-const deleteUsers = async (req, res) =>{
-  try{
-    const { id }= req.params
-    
-    if(!id){
-      return res.status(400).json({success:false,message:"Invalid user ID"})
-    }
-    const deletedUser=await Contact.findByIdAndDelete(id)
-    if(!deletedUser){
-      return res.status(400).json({
-        success:false,
-        message:"User Not Found",
-      })
-    }
-    return res.status(200).json({
-      success:true,
-      message:"User Deleted Successfully",
-    })
-  }catch(e){
-      console.error(`Delete User Error: ${e}`)
-      return res.status(500).json({
-        success:false,
-        message:"Server error while deleting user",
-        error: e.message,
-      })
+// LOGIN USER (by email only)
+const loginUser = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await Contact.findOne({ email });
+    if (!user) return res.status(401).json({ message: "Email not found" });
+
+    res.json({ success: true, message: "Login successful", user: { id: user._id, name: user.name, email: user.email, phone: user.phone } });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: err.message });
   }
-}
-module.exports = {
-  UserData,
-  fetchUsers,
-  editUsers,
-  deleteUsers,
 };
+
+// REAL-TIME CHECK USER
+const checkUserExists = async (req, res) => {
+  try {
+    const { name, email, phone } = req.query;
+    const user = await Contact.findOne({ ...(name && { name }), ...(email && { email }), ...(phone && { phone }) });
+    res.json({ exists: !!user });
+  } catch (err) {
+    console.error("Check user error:", err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { fetchUsers, editUsers, deleteUsers, registerUser, loginUser, checkUserExists };
