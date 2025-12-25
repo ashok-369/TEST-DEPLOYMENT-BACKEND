@@ -21,6 +21,7 @@ dbConnect();
 const allowedOrigins = [
   "https://test.bouncyboxstudio.in",
   "http://localhost:5173",
+  "http://localhost:3000",
   "https://plumeriaresort.in",
 ];
 
